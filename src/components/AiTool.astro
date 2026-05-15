@@ -1,0 +1,127 @@
+---
+// AI Lab Component for Astro + Tailwind
+---
+
+<div class="max-w-3xl mx-auto p-1 bg-gradient-to-br from-indigo-600 to-cyan-500 rounded-3xl shadow-2xl">
+  <div class="bg-slate-950 p-8 rounded-[1.4rem]">
+    
+    <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+      <div>
+        <h3 class="text-2xl font-bold text-white tracking-tight">AI Engineering Lab</h3>
+        <p class="text-slate-400 text-sm">Testing Hugging Face models via FastAPI</p>
+      </div>
+      
+      <select id="tool-selector" class="bg-slate-800 text-slate-200 border border-slate-700 px-4 py-2 rounded-xl outline-none focus:ring-2 focus:ring-cyan-500 cursor-pointer">
+        <option value="summarize">📝 Summarizer</option>
+        <option value="titles">🔥 Viral Titles</option>
+        <option value="hashtags">#️⃣ Hashtag Gen</option>
+        <option value="translate">🌍 Translator (EN)</option>
+      </select>
+    </div>
+
+    <textarea 
+      id="ai-input"
+      class="w-full h-40 p-5 bg-slate-900/50 text-slate-200 border border-slate-800 rounded-2xl focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all placeholder:text-slate-600 resize-none"
+      placeholder="Paste your content here..."></textarea>
+
+    <button 
+      id="ai-submit"
+      class="mt-6 w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl transition-all flex items-center justify-center gap-3 disabled:opacity-50">
+      <span id="btn-text">Process Content</span>
+      <div id="spinner" class="hidden animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+    </button>
+
+    <div id="output-container" class="hidden mt-8 space-y-2 animate-in fade-in slide-in-from-bottom-2">
+      <div class="flex items-center justify-between px-1">
+        <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">Model Output</span>
+        <button id="copy-btn" class="text-xs text-cyan-400 hover:underline">Copy Result</button>
+      </div>
+      <div id="ai-output" class="p-6 bg-slate-900 border border-slate-800 rounded-2xl text-slate-300 font-mono text-sm whitespace-pre-wrap">
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // 1. Map your EXACT Python endpoints
+  const ENDPOINTS: Record<string, string> = {
+    summarize: '/api/ai/summarize',
+    titles: '/api/ai/titles',
+    hashtags: '/api/ai/hashtags',
+    translate: '/api/ai/translate'
+  };
+
+  // 2. Map the keys your Pydantic models return
+  const RESPONSE_KEYS: Record<string, string> = {
+    summarize: 'summary',
+    titles: 'titles',
+    hashtags: 'hashtags',
+    translate: 'translated'
+  };
+
+  const BASE_URL = 'https://ai-creator-api.onrender.com';
+
+  // DOM Elements
+  const btn = document.getElementById('ai-submit') as HTMLButtonElement;
+  const btnText = document.getElementById('btn-text')!;
+  const spinner = document.getElementById('spinner')!;
+  const selector = document.getElementById('tool-selector') as HTMLSelectElement;
+  const input = document.getElementById('ai-input') as HTMLTextAreaElement;
+  const outputContainer = document.getElementById('output-container')!;
+  const output = document.getElementById('ai-output')!;
+
+  btn.addEventListener('click', async () => {
+    const textValue = input.value.trim();
+    if (!textValue) return;
+
+    const selectedTool = selector.value;
+    const targetUrl = `${BASE_URL}${ENDPOINTS[selectedTool]}`;
+
+    // Loading State
+    btn.disabled = true;
+    spinner.classList.remove('hidden');
+    btnText.innerText = "Waking up Render server...";
+    outputContainer.classList.remove('hidden');
+    output.innerText = "Processing... (If the API was idle, this takes ~50s)";
+    output.classList.remove('text-red-400');
+
+    try {
+      const response = await fetch(targetUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // The backend schema requires both "request" and "body" wrappers
+        body: JSON.stringify({ 
+          request: { text: textValue },
+          body: { text: textValue }
+        }) 
+      });
+
+      if (!response.ok) {
+        if (response.status === 500) {
+          throw new Error("Internal Server Error (500): The Hugging Face inference API might be failing on the backend.");
+        }
+        throw new Error(`Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Access the specific field based on the tool (e.g., data.summary)
+      const key = RESPONSE_KEYS[selectedTool];
+      output.innerText = data[key] || "No content returned.";
+
+    } catch (err: any) {
+      output.innerText = `Error: ${err.message || "Ensure your API is live and CORS is enabled in main.py"}`;
+      output.classList.add('text-red-400');
+    } finally {
+      btn.disabled = false;
+      spinner.classList.add('hidden');
+      btnText.innerText = "Process Content";
+    }
+  });
+
+  document.getElementById('copy-btn')?.addEventListener('click', () => {
+    navigator.clipboard.writeText(output.innerText);
+    alert("Copied!");
+  });
+</script>
