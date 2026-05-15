@@ -90,11 +90,7 @@
       const response = await fetch(targetUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // The backend schema requires both "request" and "body" wrappers
-        body: JSON.stringify({ 
-          request: { text: textValue },
-          body: { text: textValue }
-        }) 
+        body: JSON.stringify({ text: textValue }) 
       });
 
       if (!response.ok) {
