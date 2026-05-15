@@ -36,7 +36,7 @@
         <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">Model Output</span>
         <button id="copy-btn" class="text-xs text-cyan-400 hover:underline">Copy Result</button>
       </div>
-      <div id="ai-output" class="p-6 bg-slate-900 border border-slate-800 rounded-2xl text-slate-300 font-mono text-sm whitespace-pre-wrap">
+      <div id="ai-output" class="p-6 bg-slate-900 border border-slate-800 rounded-2xl text-slate-300 font-mono text-sm whitespace-pre-wrap break-words">
       </div>
     </div>
 
@@ -104,7 +104,20 @@
       
       // Access the specific field based on the tool (e.g., data.summary)
       const key = RESPONSE_KEYS[selectedTool];
-      output.innerText = data[key] || "No content returned.";
+      let result = data[key];
+      
+      // If the response is an array (like titles or hashtags), format it nicely
+      if (Array.isArray(result)) {
+        if (selectedTool === 'hashtags') {
+          result = result.join(' '); // Separate hashtags by spaces
+        } else if (selectedTool === 'titles') {
+          result = result.map((t, i) => `${i + 1}. ${t}`).join('\n\n'); // Numbered list
+        } else {
+          result = result.join('\n');
+        }
+      }
+      
+      output.innerText = result || "No content returned.";
 
     } catch (err: any) {
       output.innerText = `Error: ${err.message || "Ensure your API is live and CORS is enabled in main.py"}`;
