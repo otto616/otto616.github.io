@@ -21,6 +21,7 @@ jobs:
         with:
           # If your package manager is npm, this will work out of the box
           path: .
+          node-version: 22
 
   deploy:
     needs: build
